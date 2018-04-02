@@ -19,10 +19,17 @@ public class Character {
     private String died;
     private String culture;
 
-    public Character() {
-    }
+    public Character() {}
 
-    public Character(String name, String desc, String words, String born, ArrayList<String> titles, ArrayList<String> aliases, String father, String mother, String died) {
+    public Character(String name,
+                     String desc,
+                     String words,
+                     String born,
+                     ArrayList<String> titles,
+                     ArrayList<String> aliases,
+                     String father,
+                     String mother,
+                     String died) {
         this.name = name;
         this.desc = desc;
         this.words = words;
