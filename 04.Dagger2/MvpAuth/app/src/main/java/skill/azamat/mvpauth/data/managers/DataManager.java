@@ -1,28 +1,49 @@
-package skill.azamat.mvpauth.data;
+package skill.azamat.mvpauth.data.managers;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.inject.Inject;
+
+import skill.azamat.mvpauth.App;
+import skill.azamat.mvpauth.data.network.RestService;
 import skill.azamat.mvpauth.data.storage.dto.ProductDto;
+import skill.azamat.mvpauth.di.DaggerService;
+import skill.azamat.mvpauth.di.components.DaggerDataManagerComponent;
+import skill.azamat.mvpauth.di.components.DataManagerComponent;
+import skill.azamat.mvpauth.di.modules.LocalModule;
+import skill.azamat.mvpauth.di.modules.NetworkModule;
 
 /**
  * Created by Asus on 24.03.2018.
  */
 
 public class DataManager {
-    private static final DataManager ourInstance = new DataManager();
+
     private List<ProductDto> mMockProductList;
 
-    private DataManager() {
+    @Inject
+    PreferencesManager mPreferencesManager;
+    @Inject
+    RestService mRestService;
+
+    public DataManager() {
+
+        DataManagerComponent component = DaggerService.getComponent(DataManagerComponent.class);
+        if (component == null) {
+            component = DaggerDataManagerComponent.builder()
+                    .appComponent(App.getAppComponent())
+                    .localModule(new LocalModule())
+                    .networkModule(new NetworkModule())
+                    .build();
+            DaggerService.registerComponent(DataManagerComponent.class, component);
+        }
+        component.inject(this);
+
         generateMockData();
     }
 
-    public static DataManager getInstance() {
-        return ourInstance;
-    }
-
     public ProductDto getProductById(int productId) {
-
         // TODO: 24.03.2018
         return mMockProductList.get(productId+1);
     }

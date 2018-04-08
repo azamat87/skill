@@ -15,15 +15,21 @@ import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
 import android.widget.FrameLayout;
 
+import javax.inject.Inject;
+
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import dagger.Provides;
 import skill.azamat.mvpauth.BuildConfig;
 import skill.azamat.mvpauth.R;
-import skill.azamat.mvpauth.mvp.view.IView;
+import skill.azamat.mvpauth.di.DaggerService;
+import skill.azamat.mvpauth.di.scopes.RootScope;
+import skill.azamat.mvpauth.mvp.presenter.RootPresenter;
+import skill.azamat.mvpauth.mvp.view.IRootView;
 import skill.azamat.mvpauth.ui.fragments.AccountFragment;
 import skill.azamat.mvpauth.ui.fragments.CatalogFragment;
 
-public class RootActivity extends AppCompatActivity implements IView, NavigationView.OnNavigationItemSelectedListener {
+public class RootActivity extends AppCompatActivity implements IRootView, NavigationView.OnNavigationItemSelectedListener {
 
     @BindView(R.id.drawer_layout)
     DrawerLayout mDrawerLayout;
@@ -38,23 +44,39 @@ public class RootActivity extends AppCompatActivity implements IView, Navigation
 
     FragmentManager mFragmentManager;
 
+    @Inject
+    RootPresenter mRootPresenter;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_root);
         ButterKnife.bind(this);
 
+        Component component = DaggerService.getComponent(Component.class);
+        if (component == null) {
+            component = createDaggerComponent();
+            DaggerService.registerComponent(Component.class, component);
+        }
+        component.inject(this);
+
         initToolbar();
         initDrawer();
+        mRootPresenter.takeView(this);
+        mRootPresenter.initView();
 
         mFragmentManager = getSupportFragmentManager();
         if (savedInstanceState == null) {
             mFragmentManager.beginTransaction()
                     .replace(R.id.fragment_container, new CatalogFragment())
                     .commit();
-
-
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        mRootPresenter.dropView();
+        super.onDestroy();
     }
 
     private void initToolbar() {
@@ -103,7 +125,7 @@ public class RootActivity extends AppCompatActivity implements IView, Navigation
         return false;
     }
 
-    // region ============= IView =================================================================
+    // region ============= IRootView =================================================================
 
     @Override
     public void showMessage(String message) {
@@ -132,4 +154,34 @@ public class RootActivity extends AppCompatActivity implements IView, Navigation
     }
 
     // endregion
+
+
+    //    region ================ DI ===================================================================
+
+    private Component createDaggerComponent() {
+        return DaggerRootActivity_Component.builder()
+                .module(new Module())
+                .build();
+    }
+
+    @dagger.Module
+    public class Module {
+
+        @Provides
+        @RootScope
+        RootPresenter provideRootPresenter() {
+            return new RootPresenter();
+        }
+
+    }
+
+    @dagger.Component(modules = Module.class)
+    @RootScope
+    public interface Component{
+        void inject(RootActivity activity);
+        RootPresenter getRootPresenter();
+
+    }
+
+//    endregion
 }

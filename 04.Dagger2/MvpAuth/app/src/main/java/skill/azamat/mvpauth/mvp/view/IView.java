@@ -6,12 +6,6 @@ package skill.azamat.mvpauth.mvp.view;
 
 public interface IView {
 
-    void showMessage(String message);
 
-    void showError(Throwable e);
-
-    void showLoad();
-
-    void hideLoad();
 
 }

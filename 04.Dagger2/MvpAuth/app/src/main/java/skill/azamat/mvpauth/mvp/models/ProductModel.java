@@ -1,15 +1,15 @@
 package skill.azamat.mvpauth.mvp.models;
 
-import skill.azamat.mvpauth.data.DataManager;
+import skill.azamat.mvpauth.data.managers.DataManager;
 import skill.azamat.mvpauth.data.storage.dto.ProductDto;
 
 /**
  * Created by Asus on 24.03.2018.
  */
 
-public class ProductModel {
+public class ProductModel extends AbstractModel {
 
-    DataManager mDataManager = DataManager.getInstance();
+    DataManager mDataManager;
 
     public ProductDto getProductById(int productId) {
         // TODO: 24.03.2018 get product from manager

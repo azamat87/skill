@@ -11,12 +11,24 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.squareup.picasso.Callback;
+import com.squareup.picasso.NetworkPolicy;
+import com.squareup.picasso.Picasso;
+
+import javax.inject.Inject;
+
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import dagger.Provides;
+import skill.azamat.mvpauth.App;
 import skill.azamat.mvpauth.R;
 import skill.azamat.mvpauth.data.storage.dto.ProductDto;
+import skill.azamat.mvpauth.di.DaggerService;
+import skill.azamat.mvpauth.di.components.DaggerPicassoComponent;
+import skill.azamat.mvpauth.di.components.PicassoComponent;
+import skill.azamat.mvpauth.di.modules.PicassoCacheModule;
+import skill.azamat.mvpauth.di.scopes.ProductScope;
 import skill.azamat.mvpauth.mvp.presenter.ProductPresenter;
-import skill.azamat.mvpauth.mvp.presenter.ProductPresenterFactory;
 import skill.azamat.mvpauth.mvp.view.IProductView;
 import skill.azamat.mvpauth.ui.activities.RootActivity;
 
@@ -43,9 +55,13 @@ public class ProductFragment extends Fragment implements IProductView, View.OnCl
     @BindView(R.id.minus_btn)
     ImageButton minusBtn;
 
-//    @BindDrawable(R.id.product_image)
 
-    private ProductPresenter mPresenter;
+    //    @BindDrawable(R.id.product_image)
+    @Inject
+    ProductPresenter mPresenter;
+
+    @Inject
+    Picasso mPicasso;
 
     public ProductFragment() {
     }
@@ -61,8 +77,9 @@ public class ProductFragment extends Fragment implements IProductView, View.OnCl
     private void readBundle(Bundle bundle) {
         if (bundle != null) {
             ProductDto product = bundle.getParcelable("PRODUCT");
-            // TODO: 25.03.2018 init presenter
-            mPresenter = ProductPresenterFactory.getInstance(product);
+            Component component = createDaggerComponent(product);
+            component.inject(this);
+            // TODO: 08.04.2018 fix recreate
         }
     }
 
@@ -87,28 +104,28 @@ public class ProductFragment extends Fragment implements IProductView, View.OnCl
 
     // region ===================== IProductView ==================================================
 
-    @Override
-    public void showMessage(String message) {
-        getRootActivity().showMessage(message);
-    }
+//    @Override
+//    public void showMessage(String message) {
+//        getRootActivity().showMessage(message);
+//    }
+//
+//    @Override
+//    public void showError(Throwable e) {
+//        getRootActivity().showError(e);
+//    }
+//
+//    @Override
+//    public void showLoad() {
+//        getRootActivity().showLoad();
+//    }
+//
+//    @Override
+//    public void hideLoad() {
+//        getRootActivity().hideLoad();
+//    }
 
     @Override
-    public void showError(Throwable e) {
-        getRootActivity().showError(e);
-    }
-
-    @Override
-    public void showLoad() {
-        getRootActivity().showLoad();
-    }
-
-    @Override
-    public void hideLoad() {
-        getRootActivity().hideLoad();
-    }
-
-    @Override
-    public void showProductView(ProductDto productDto) {
+    public void showProductView(final ProductDto productDto) {
         productNameTxt.setText(productDto.getProductName());
         productDescriptionTxt.setText(productDto.getDescription());
         productCountTxt.setText(String.valueOf(productDto.getCount()));
@@ -117,8 +134,25 @@ public class ProductFragment extends Fragment implements IProductView, View.OnCl
         } else {
             productPriceTxt.setText(String.valueOf(productDto.getPrice() + ".-"));
         }
+        mPicasso.load(productDto.getImageUrl())
+                .networkPolicy(NetworkPolicy.OFFLINE)
+                .fit()
+                .centerCrop()
+                .into(productImge, new Callback() {
+                    @Override
+                    public void onSuccess() {
 
-        // TODO: 25.03.2018 Picasso image
+                    }
+
+                    @Override
+                    public void onError(Exception e) {
+                        mPicasso.load(productDto.getImageUrl())
+                                .networkPolicy(NetworkPolicy.OFFLINE)
+                                .fit()
+                                .centerCrop()
+                                .into(productImge);
+                    }
+                });
 
     }
 
@@ -126,7 +160,7 @@ public class ProductFragment extends Fragment implements IProductView, View.OnCl
     public void updateProductCountView(ProductDto product) {
         productCountTxt.setText(String.valueOf(product.getCount()));
         if (product.getCount() > 0) {
-            productPriceTxt.setText(String.valueOf(product.getCount()*product.getPrice() + ".-"));
+            productPriceTxt.setText(String.valueOf(product.getCount() * product.getPrice() + ".-"));
         }
     }
 
@@ -147,4 +181,48 @@ public class ProductFragment extends Fragment implements IProductView, View.OnCl
                 break;
         }
     }
+
+//    region =================== DI ==============================================================
+
+    private Component createDaggerComponent(ProductDto product) {
+        PicassoComponent picassoComponent = DaggerService.getComponent(PicassoComponent.class);
+        if (picassoComponent == null) {
+            picassoComponent = DaggerPicassoComponent.builder()
+                    .appComponent(App.getAppComponent())
+                    .picassoCacheModule(new PicassoCacheModule())
+                    .build();
+
+            DaggerService.registerComponent(PicassoComponent.class, picassoComponent);
+        }
+
+        return DaggerProductFragment_Component.builder()
+                .picassoComponent(picassoComponent)
+                .module(new Module(product))
+                .build();
+    }
+
+    @dagger.Module
+    public class Module {
+
+        ProductDto mProductDto;
+
+        public Module(ProductDto productDto) {
+            mProductDto = productDto;
+        }
+
+        @Provides
+        @ProductScope
+        ProductPresenter provideProductPresenter() {
+            return new ProductPresenter(mProductDto);
+        }
+
+    }
+
+    @dagger.Component(dependencies = PicassoComponent.class,modules = Module.class)
+    @ProductScope
+    interface Component{
+        void inject(ProductFragment fragment);
+    }
+
+//    endregion
 }

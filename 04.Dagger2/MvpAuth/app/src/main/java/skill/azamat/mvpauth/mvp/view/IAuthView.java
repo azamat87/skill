@@ -9,7 +9,7 @@ import skill.azamat.mvpauth.ui.custom_views.AuthPanel;
  * Created by Asus on 21.03.2018.
  */
 
-public interface IAuthView extends IView{
+public interface IAuthView extends IRootView{
 
     IAuthPresenter getPresenter();
 

@@ -12,13 +12,17 @@ import android.widget.Button;
 
 import java.util.List;
 
+import javax.inject.Inject;
+
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import dagger.Provides;
 import skill.azamat.mvpauth.R;
 import skill.azamat.mvpauth.data.storage.dto.ProductDto;
+import skill.azamat.mvpauth.di.DaggerService;
+import skill.azamat.mvpauth.di.scopes.CatalogScope;
 import skill.azamat.mvpauth.mvp.presenter.CatalogPresenter;
 import skill.azamat.mvpauth.mvp.view.ICatalogView;
-import skill.azamat.mvpauth.ui.activities.RootActivity;
 import skill.azamat.mvpauth.ui.fragments.adapters.CatalogAdapter;
 
 /**
@@ -28,7 +32,8 @@ import skill.azamat.mvpauth.ui.fragments.adapters.CatalogAdapter;
 public class CatalogFragment extends Fragment implements ICatalogView, View.OnClickListener {
 
 
-    CatalogPresenter mPresenter = CatalogPresenter.getInstance();
+    @Inject
+    CatalogPresenter mPresenter;
 
     @BindView(R.id.add_to_card_btn)
     Button addToCardBtn;
@@ -51,6 +56,14 @@ public class CatalogFragment extends Fragment implements ICatalogView, View.OnCl
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_catalog, container, false);
         ButterKnife.bind(this, view);
+
+        Component component = DaggerService.getComponent(Component.class);
+        if (component == null) {
+            component = createDaggerComponent();
+            DaggerService.registerComponent(Component.class, component);
+        }
+        component.inject(this);
+
         mPresenter.takeView(this);
         mPresenter.initView();
         addToCardBtn.setOnClickListener(this);
@@ -66,11 +79,6 @@ public class CatalogFragment extends Fragment implements ICatalogView, View.OnCl
 
     //region ================== ICatalogView =====================================================
 
-
-    @Override
-    public void showAddToCardMessage(ProductDto productDto) {
-        showMessage("Товар " + productDto.getProductName() + " успешно добавлен в карзину");
-    }
 
     @Override
     public void showCatalogView(List<ProductDto> productsDtos) {
@@ -97,29 +105,55 @@ public class CatalogFragment extends Fragment implements ICatalogView, View.OnCl
 
     // region ========================= IView ====================================================
 
-    @Override
-    public void showMessage(String message) {
-        getRootActivity().showMessage(message);
-    }
-
-    @Override
-    public void showError(Throwable e) {
-        getRootActivity().showError(e);
-    }
-
-    @Override
-    public void showLoad() {
-        getRootActivity().showLoad();
-    }
-
-    @Override
-    public void hideLoad() {
-        getRootActivity().hideLoad();
-    }
+//    @Override
+//    public void showMessage(String message) {
+//        getRootActivity().showMessage(message);
+//    }
+//
+//    @Override
+//    public void showError(Throwable e) {
+//        getRootActivity().showError(e);
+//    }
+//
+//    @Override
+//    public void showLoad() {
+//        getRootActivity().showLoad();
+//    }
+//
+//    @Override
+//    public void hideLoad() {
+//        getRootActivity().hideLoad();
+//    }
 
     // endregion
 
-    private RootActivity getRootActivity() {
-        return (RootActivity) getActivity();
+
+
+//    region ============ DI ====================================================================
+
+    private Component createDaggerComponent() {
+
+        return DaggerCatalogFragment_Component.builder()
+                .module(new Module())
+                .build();
     }
+
+    @dagger.Module
+    public class Module {
+
+        @Provides
+        @CatalogScope
+        CatalogPresenter provideCatalogPresenter() {
+            return new CatalogPresenter();
+        }
+
+    }
+
+    @dagger.Component(modules = Module.class)
+    @CatalogScope
+    interface Component{
+        void inject(CatalogFragment fragment);
+    }
+
+//    endregion
 }

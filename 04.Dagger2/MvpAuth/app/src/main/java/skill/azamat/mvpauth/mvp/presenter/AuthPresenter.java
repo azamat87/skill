@@ -1,5 +1,10 @@
 package skill.azamat.mvpauth.mvp.presenter;
 
+import javax.inject.Inject;
+
+import dagger.Provides;
+import skill.azamat.mvpauth.di.DaggerService;
+import skill.azamat.mvpauth.di.scopes.AuthScope;
 import skill.azamat.mvpauth.mvp.models.AuthModel;
 import skill.azamat.mvpauth.mvp.view.IAuthView;
 import skill.azamat.mvpauth.ui.custom_views.AuthPanel;
@@ -10,17 +15,20 @@ import skill.azamat.mvpauth.ui.custom_views.AuthPanel;
 
 public class AuthPresenter extends AbstractPresenter<IAuthView> implements IAuthPresenter {
 
-    private static AuthPresenter ourInstance = new AuthPresenter();
+    @Inject
+    AuthModel mAuthModel;
 
-    private AuthModel mAuthModel;
-    private IAuthView mAuthView;
-
-    private AuthPresenter() {
+    public AuthPresenter() {
         mAuthModel = new AuthModel();
-    }
 
-    public static AuthPresenter getInstance() {
-        return ourInstance;
+
+        Component component = DaggerService.getComponent(Component.class);
+        if (component == null) {
+            component = createDaggerComponent();
+            DaggerService.registerComponent(Component.class, component);
+        }
+        component.inject(this);
+
     }
 
     @Override
@@ -83,5 +91,30 @@ public class AuthPresenter extends AbstractPresenter<IAuthView> implements IAuth
         return mAuthModel.isAuthUser();
     }
 
+
+    // region ==================== DI =============================================================
+
+    @dagger.Module
+    public class Module {
+        @Provides
+        @AuthScope
+        AuthModel provideAuthModule() {
+            return new AuthModel();
+        }
+    }
+
+    @dagger.Component(modules = Module.class)
+    @AuthScope
+    interface Component {
+        void inject(AuthPresenter presenter);
+    }
+
+    private Component createDaggerComponent() {
+        return DaggerAuthPresenter_Component.builder()
+                .module(new Module())
+                .build();
+    }
+
+    // endregion
 
 }

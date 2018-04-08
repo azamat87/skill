@@ -4,7 +4,7 @@ package skill.azamat.mvpauth.mvp.models;
  * Created by Asus on 21.03.2018.
  */
 
-public class AuthModel {
+public class AuthModel extends AbstractModel {
 
     public AuthModel() {
     }

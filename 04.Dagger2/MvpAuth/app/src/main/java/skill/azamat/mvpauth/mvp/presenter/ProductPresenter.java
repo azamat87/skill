@@ -1,6 +1,11 @@
 package skill.azamat.mvpauth.mvp.presenter;
 
+import javax.inject.Inject;
+
+import dagger.Provides;
 import skill.azamat.mvpauth.data.storage.dto.ProductDto;
+import skill.azamat.mvpauth.di.DaggerService;
+import skill.azamat.mvpauth.di.scopes.ProductScope;
 import skill.azamat.mvpauth.mvp.models.ProductModel;
 import skill.azamat.mvpauth.mvp.view.IProductView;
 
@@ -12,16 +17,19 @@ public class ProductPresenter extends AbstractPresenter<IProductView> implements
 
     private static final String TAG = "ProductPresenter";
 
-    private ProductModel mProductModel;
+    @Inject
+    ProductModel mProductModel;
+
     private ProductDto mProductDto;
 
-    public static ProductPresenter newInstance(ProductDto product) {
+    public ProductPresenter(ProductDto product) {
 
-        return new ProductPresenter(product);
-    }
-
-    private ProductPresenter(ProductDto product) {
-        mProductModel = new ProductModel();
+        Component component = DaggerService.getComponent(Component.class);
+        if (component == null) {
+            component = createDaggerComponent(product);
+            DaggerService.registerComponent(Component.class, component);
+        }
+        component.inject(this);
         mProductDto = product;
     }
 
@@ -51,4 +59,31 @@ public class ProductPresenter extends AbstractPresenter<IProductView> implements
             }
         }
     }
+
+//    region =============== DI =================================================================
+
+    private Component createDaggerComponent(ProductDto product) {
+        return DaggerProductPresenter_Component.builder()
+                .module(new Module())
+                .build();
+    }
+
+    @dagger.Module
+    public class Module {
+
+        @Provides
+        @ProductScope
+        ProductModel provideProductModel() {
+            return new ProductModel();
+        }
+
+    }
+
+    @dagger.Component(modules = Module.class)
+    @ProductScope
+    interface Component{
+        void inject(ProductPresenter presenter);
+    }
+
+//    endregion
 }

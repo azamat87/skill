@@ -10,8 +10,6 @@ import skill.azamat.mvpauth.data.storage.dto.ProductDto;
 
 public interface ICatalogView extends IView {
 
-    void showAddToCardMessage(ProductDto productDto);
-
     void showCatalogView(List<ProductDto> productsDtos);
 
     void showAuthScreen();
